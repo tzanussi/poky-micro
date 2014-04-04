@@ -1,0 +1,7 @@
+# short-description: Create the microLinux micro-galileo disk image
+# long-description: Creates the partitioned disk image that the user
+# can directly dd to the sdcard.
+
+part /boot --source micro-galileo --size 50 --ondisk mmcblk0 --fstype=msdos --label msdos --active --align 1024
+
+part / --source rootfs --size 500 --ondisk mmcblk0 --fstype=ext3 --label platform --align 1024
