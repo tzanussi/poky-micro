@@ -29,21 +29,22 @@ import shutil
 import re
 import tempfile
 
-from mic import chroot, msger
-from mic.utils import misc, fs_related, errors, runner, cmdln
-from mic.conf import configmgr
-from mic.plugin import pluginmgr
-from mic.utils.partitionedfs import PartitionedMount
-import mic.imager.direct as direct
-from mic.pluginbase import SourcePlugin
-from mic.utils.oe.misc import *
+from wic import kickstart, msger
+from wic.utils import misc, fs_related, errors, runner, cmdln
+from wic.conf import configmgr
+from wic.plugin import pluginmgr
+import wic.imager.direct as direct
+from wic.pluginbase import SourcePlugin
+from wic.utils.oe.misc import *
+from wic.imager.direct import DirectImageCreator
 
 class MicroGalileoPlugin(SourcePlugin):
     name = 'micro-galileo'
 
     @classmethod
-    def do_stage_partition(self, part, cr, workdir, oe_builddir, bootimg_dir,
-                           kernel_dir, native_sysroot):
+    def do_stage_partition(self, part, source_params, cr, cr_workdir,
+                           oe_builddir, bootimg_dir, kernel_dir,
+                           native_sysroot):
         """
         Special content staging hook called before do_prepare_partition(),
         normally empty.
@@ -58,10 +59,10 @@ class MicroGalileoPlugin(SourcePlugin):
         # just so the result notes display it
         cr.set_bootimg_dir(bootimg_dir)
 
-        hdddir = "%s/hdd" % workdir
-        hdd_boot_dir = "%s/hdd/boot" % workdir
+        hdddir = "%s/hdd" % cr_workdir
+        hdd_boot_dir = "%s/hdd/boot" % cr_workdir
         boot_dir = "%s/boot" % bootimg_dir
-        rm_cmd = "rm -rf %s" % workdir
+        rm_cmd = "rm -rf %s" % cr_workdir
         exec_cmd(rm_cmd)
 
         msger.debug("Copying %s to %s" % (boot_dir, hdd_boot_dir))
@@ -76,9 +77,9 @@ class MicroGalileoPlugin(SourcePlugin):
         tmp = exec_cmd(install_cmd)
 
     @classmethod
-    def do_prepare_partition(self, part, cr, cr_workdir, oe_builddir, bootimg_dir,
-                             kernel_dir, rootfs_dir, native_sysroot):
-
+    def do_prepare_partition(self, part, source_params, cr, cr_workdir,
+                             oe_builddir, bootimg_dir, kernel_dir,
+                             rootfs_dir, native_sysroot):
         """
         Called to do the actual content population for a partition i.e. it
         'prepares' the partition to be incorporated into the image.
@@ -95,7 +96,7 @@ class MicroGalileoPlugin(SourcePlugin):
         tmp = exec_cmd(install_cmd)
 
         du_cmd = "du -bks %s" % hdddir
-        rc, out = exec_cmd(du_cmd)
+        out = exec_cmd(du_cmd)
         blocks = int(out.split()[0])
 
         extra_blocks = part.get_extra_block_count(blocks)
@@ -127,7 +128,7 @@ class MicroGalileoPlugin(SourcePlugin):
         exec_cmd(chmod_cmd)
 
         du_cmd = "du -Lbms %s" % bootimg
-        rc, out = exec_cmd(du_cmd)
+        out = exec_cmd(du_cmd)
         bootimg_size = out.split()[0]
 
         part.set_size(bootimg_size)
